@@ -22,4 +22,5 @@ for bi, blur in enumerate([2, 4, 8]):
     plt.axis("off")
     plt.title("标准差为 " + imNum)
     plt.imshow(im2)
+plt.tight_layout()
 plt.show()
