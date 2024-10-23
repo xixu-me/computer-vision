@@ -1,5 +1,3 @@
-# 根据MeanShift算法的原理，手动实现Meanshift算法。
-
 import math
 
 import matplotlib.pyplot as plt

@@ -1,12 +1,9 @@
-# 使用sklearn.cluster库中的MeanShift类，对生成的二维模拟数据进行聚类。
-
 import matplotlib.pyplot as plt
-import numpy as np
 from sklearn.cluster import MeanShift, estimate_bandwidth
 from sklearn.datasets import make_blobs
 
 centers = [[1, 1], [-1, -1], [1, -1]]
-X, _ = make_blobs(n_samples=300, centers=centers, cluster_std=0.4)
+X, _ = make_blobs(n_samples=300, centers=centers, cluster_std=0.4)  # type: ignore
 
 bandwidth = estimate_bandwidth(X, quantile=0.2, n_samples=300)
 
