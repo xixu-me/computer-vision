@@ -74,6 +74,16 @@ def reconstruct_3d_points(img1, img2, K, R1, t1, R2, t2):
     P1 = K @ np.hstack((R1, t1))
     P2 = K @ np.hstack((R2, t2))
 
+    # 使用RANSAC进行几何验证
+    E, mask = cv2.findEssentialMat(
+        pts1, pts2, K, method=cv2.RANSAC, prob=0.999, threshold=1.0
+    )
+
+    # 只保留内点
+    matches = [m for i, m in enumerate(matches) if mask[i][0]]
+    pts1 = pts1[mask.ravel() == 1]
+    pts2 = pts2[mask.ravel() == 1]
+
     # 三角测量得到3D点
     points_4D = cv2.triangulatePoints(P1, P2, pts1, pts2)
     points_3D = points_4D / points_4D[3]
