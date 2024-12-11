@@ -27,9 +27,9 @@ train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
 
-class Net(torch.nn.Module):
+class Net3Layer(torch.nn.Module):
     def __init__(self):
-        super(Net, self).__init__()
+        super(Net3Layer, self).__init__()
         self.fc1 = torch.nn.Linear(28 * 28, 512)
         self.fc2 = torch.nn.Linear(512, 128)
         self.fc3 = torch.nn.Linear(128, 10)
@@ -42,24 +42,49 @@ class Net(torch.nn.Module):
         return x
 
 
-# Create two models for comparison
-model_ce = Net()
-model_mse = Net()
+class Net9Layer(torch.nn.Module):
+    def __init__(self):
+        super(Net9Layer, self).__init__()
+        self.fc1 = torch.nn.Linear(28 * 28, 512)
+        self.fc2 = torch.nn.Linear(512, 512)
+        self.fc3 = torch.nn.Linear(512, 256)
+        self.fc4 = torch.nn.Linear(256, 256)
+        self.fc5 = torch.nn.Linear(256, 128)
+        self.fc6 = torch.nn.Linear(128, 128)
+        self.fc7 = torch.nn.Linear(128, 64)
+        self.fc8 = torch.nn.Linear(64, 64)
+        self.fc9 = torch.nn.Linear(64, 10)
 
-# Create two different loss functions
-criterion_ce = nn.CrossEntropyLoss()
-criterion_mse = nn.MSELoss()
+    def forward(self, x):
+        x = x.view(-1, 28 * 28)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = F.relu(self.fc3(x))
+        x = F.relu(self.fc4(x))
+        x = F.relu(self.fc5(x))
+        x = F.relu(self.fc6(x))
+        x = F.relu(self.fc7(x))
+        x = F.relu(self.fc8(x))
+        x = self.fc9(x)
+        return x
 
-# Create optimizers for both models
-optimizer_ce = torch.optim.SGD(
-    model_ce.parameters(), lr=learning_rate, momentum=momentum
+
+# Create two models
+model_3layer = Net3Layer()
+model_9layer = Net9Layer()
+
+# Create optimizers
+optimizer_3layer = torch.optim.SGD(
+    model_3layer.parameters(), lr=learning_rate, momentum=momentum
 )
-optimizer_mse = torch.optim.SGD(
-    model_mse.parameters(), lr=learning_rate, momentum=momentum
+optimizer_9layer = torch.optim.SGD(
+    model_9layer.parameters(), lr=learning_rate, momentum=momentum
 )
 
+criterion = torch.nn.CrossEntropyLoss()
 
-def train(epoch, model, criterion, optimizer, name=""):
+
+def train(epoch, model, optimizer, name=""):
     model.train()
     running_loss = 0.0
     running_total = 0
@@ -68,14 +93,7 @@ def train(epoch, model, criterion, optimizer, name=""):
     for batch_idx, (inputs, target) in enumerate(train_loader):
         optimizer.zero_grad()
         outputs = model(inputs)
-
-        # For MSE, convert targets to one-hot encoding
-        if isinstance(criterion, nn.MSELoss):
-            target_one_hot = torch.zeros(target.size(0), 10)
-            target_one_hot.scatter_(1, target.unsqueeze(1), 1)
-            loss = criterion(outputs, target_one_hot)
-        else:
-            loss = criterion(outputs, target)
+        loss = criterion(outputs, target)
 
         loss.backward()
         optimizer.step()
@@ -112,25 +130,25 @@ def test(epoch, model, name=""):
 
 
 if __name__ == "__main__":
-    acc_list_ce = []
-    acc_list_mse = []
+    acc_list_3layer = []
+    acc_list_9layer = []
 
     for epoch in range(EPOCH):
-        train(epoch, model_ce, criterion_ce, optimizer_ce, "CrossEntropy")
-        train(epoch, model_mse, criterion_mse, optimizer_mse, "MSE")
+        train(epoch, model_3layer, optimizer_3layer, "3-Layer")
+        train(epoch, model_9layer, optimizer_9layer, "9-Layer")
 
-        acc_ce = test(epoch, model_ce, "CrossEntropy")
-        acc_mse = test(epoch, model_mse, "MSE")
+        acc_3layer = test(epoch, model_3layer, "3-Layer")
+        acc_9layer = test(epoch, model_9layer, "9-Layer")
 
-        acc_list_ce.append(acc_ce)
-        acc_list_mse.append(acc_mse)
+        acc_list_3layer.append(acc_3layer)
+        acc_list_9layer.append(acc_9layer)
 
     plt.figure(figsize=(10, 6))
-    plt.plot(range(1, EPOCH + 1), acc_list_ce, label="CrossEntropy", marker="o")
-    plt.plot(range(1, EPOCH + 1), acc_list_mse, label="MSE", marker="s")
+    plt.plot(range(1, EPOCH + 1), acc_list_3layer, label="3-Layer Network", marker="o")
+    plt.plot(range(1, EPOCH + 1), acc_list_9layer, label="9-Layer Network", marker="s")
     plt.xlabel("Epoch")
     plt.ylabel("Accuracy On TestSet (%)")
-    plt.title("Comparison of Loss Functions: CrossEntropy vs MSE")
+    plt.title("Comparison of Network Depths")
     plt.legend()
     plt.grid(True)
     plt.show()

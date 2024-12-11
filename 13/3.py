@@ -43,23 +43,19 @@ class Net(torch.nn.Module):
 
 
 # Create two models for comparison
-model_ce = Net()
-model_mse = Net()
+model_sgd = Net()
+model_adam = Net()
 
-# Create two different loss functions
-criterion_ce = nn.CrossEntropyLoss()
-criterion_mse = nn.MSELoss()
-
-# Create optimizers for both models
-optimizer_ce = torch.optim.SGD(
-    model_ce.parameters(), lr=learning_rate, momentum=momentum
+# Create different optimizers
+optimizer_sgd = torch.optim.SGD(
+    model_sgd.parameters(), lr=learning_rate, momentum=momentum
 )
-optimizer_mse = torch.optim.SGD(
-    model_mse.parameters(), lr=learning_rate, momentum=momentum
-)
+optimizer_adam = torch.optim.Adam(model_adam.parameters(), lr=learning_rate)
+
+criterion = torch.nn.CrossEntropyLoss()
 
 
-def train(epoch, model, criterion, optimizer, name=""):
+def train(epoch, model, optimizer, name=""):
     model.train()
     running_loss = 0.0
     running_total = 0
@@ -68,14 +64,7 @@ def train(epoch, model, criterion, optimizer, name=""):
     for batch_idx, (inputs, target) in enumerate(train_loader):
         optimizer.zero_grad()
         outputs = model(inputs)
-
-        # For MSE, convert targets to one-hot encoding
-        if isinstance(criterion, nn.MSELoss):
-            target_one_hot = torch.zeros(target.size(0), 10)
-            target_one_hot.scatter_(1, target.unsqueeze(1), 1)
-            loss = criterion(outputs, target_one_hot)
-        else:
-            loss = criterion(outputs, target)
+        loss = criterion(outputs, target)
 
         loss.backward()
         optimizer.step()
@@ -112,25 +101,25 @@ def test(epoch, model, name=""):
 
 
 if __name__ == "__main__":
-    acc_list_ce = []
-    acc_list_mse = []
+    acc_list_sgd = []
+    acc_list_adam = []
 
     for epoch in range(EPOCH):
-        train(epoch, model_ce, criterion_ce, optimizer_ce, "CrossEntropy")
-        train(epoch, model_mse, criterion_mse, optimizer_mse, "MSE")
+        train(epoch, model_sgd, optimizer_sgd, "SGD")
+        train(epoch, model_adam, optimizer_adam, "Adam")
 
-        acc_ce = test(epoch, model_ce, "CrossEntropy")
-        acc_mse = test(epoch, model_mse, "MSE")
+        acc_sgd = test(epoch, model_sgd, "SGD")
+        acc_adam = test(epoch, model_adam, "Adam")
 
-        acc_list_ce.append(acc_ce)
-        acc_list_mse.append(acc_mse)
+        acc_list_sgd.append(acc_sgd)
+        acc_list_adam.append(acc_adam)
 
     plt.figure(figsize=(10, 6))
-    plt.plot(range(1, EPOCH + 1), acc_list_ce, label="CrossEntropy", marker="o")
-    plt.plot(range(1, EPOCH + 1), acc_list_mse, label="MSE", marker="s")
+    plt.plot(range(1, EPOCH + 1), acc_list_sgd, label="SGD", marker="o")
+    plt.plot(range(1, EPOCH + 1), acc_list_adam, label="Adam", marker="s")
     plt.xlabel("Epoch")
     plt.ylabel("Accuracy On TestSet (%)")
-    plt.title("Comparison of Loss Functions: CrossEntropy vs MSE")
+    plt.title("Comparison of Optimizers: SGD vs Adam")
     plt.legend()
     plt.grid(True)
     plt.show()

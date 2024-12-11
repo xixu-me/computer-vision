@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 
 # Super parameters
-batch_size = 64
+batch_size_small = 64
 learning_rate = 0.01
 momentum = 0.5
 EPOCH = 10
@@ -23,8 +23,13 @@ train_dataset = datasets.MNIST(
 test_dataset = datasets.MNIST(
     root="./data/mnist", train=False, download=True, transform=transform
 )
-train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+
+batch_size_full = len(train_dataset)
+train_loader_small = DataLoader(
+    train_dataset, batch_size=batch_size_small, shuffle=True
+)
+train_loader_full = DataLoader(train_dataset, batch_size=batch_size_full, shuffle=True)
+test_loader = DataLoader(test_dataset, batch_size=batch_size_small, shuffle=False)
 
 
 class Net(torch.nn.Module):
@@ -42,40 +47,31 @@ class Net(torch.nn.Module):
         return x
 
 
-# Create two models for comparison
-model_ce = Net()
-model_mse = Net()
+# Create two models
+model_small_batch = Net()
+model_full_batch = Net()
 
-# Create two different loss functions
-criterion_ce = nn.CrossEntropyLoss()
-criterion_mse = nn.MSELoss()
-
-# Create optimizers for both models
-optimizer_ce = torch.optim.SGD(
-    model_ce.parameters(), lr=learning_rate, momentum=momentum
+# Create optimizers
+optimizer_small = torch.optim.SGD(
+    model_small_batch.parameters(), lr=learning_rate, momentum=momentum
 )
-optimizer_mse = torch.optim.SGD(
-    model_mse.parameters(), lr=learning_rate, momentum=momentum
+optimizer_full = torch.optim.SGD(
+    model_full_batch.parameters(), lr=learning_rate, momentum=momentum
 )
 
+criterion = torch.nn.CrossEntropyLoss()
 
-def train(epoch, model, criterion, optimizer, name=""):
+
+def train(epoch, model, optimizer, loader, name=""):
     model.train()
     running_loss = 0.0
     running_total = 0
     running_correct = 0
 
-    for batch_idx, (inputs, target) in enumerate(train_loader):
+    for batch_idx, (inputs, target) in enumerate(loader):
         optimizer.zero_grad()
         outputs = model(inputs)
-
-        # For MSE, convert targets to one-hot encoding
-        if isinstance(criterion, nn.MSELoss):
-            target_one_hot = torch.zeros(target.size(0), 10)
-            target_one_hot.scatter_(1, target.unsqueeze(1), 1)
-            loss = criterion(outputs, target_one_hot)
-        else:
-            loss = criterion(outputs, target)
+        loss = criterion(outputs, target)
 
         loss.backward()
         optimizer.step()
@@ -85,7 +81,7 @@ def train(epoch, model, criterion, optimizer, name=""):
         running_total += target.shape[0]
         running_correct += (predicted == target).sum().item()
 
-    avg_loss = running_loss / len(train_loader)
+    avg_loss = running_loss / len(loader)
     avg_acc = 100 * running_correct / running_total
     print(
         f"[{epoch + 1} / {EPOCH}]: {name} Training Loss: {avg_loss:.3f}, Training Accuracy: {avg_acc:.2f} %"
@@ -112,25 +108,32 @@ def test(epoch, model, name=""):
 
 
 if __name__ == "__main__":
-    acc_list_ce = []
-    acc_list_mse = []
+    acc_list_small = []
+    acc_list_full = []
 
     for epoch in range(EPOCH):
-        train(epoch, model_ce, criterion_ce, optimizer_ce, "CrossEntropy")
-        train(epoch, model_mse, criterion_mse, optimizer_mse, "MSE")
+        train(
+            epoch, model_small_batch, optimizer_small, train_loader_small, "Small Batch"
+        )
+        train(epoch, model_full_batch, optimizer_full, train_loader_full, "Full Batch")
 
-        acc_ce = test(epoch, model_ce, "CrossEntropy")
-        acc_mse = test(epoch, model_mse, "MSE")
+        acc_small = test(epoch, model_small_batch, "Small Batch")
+        acc_full = test(epoch, model_full_batch, "Full Batch")
 
-        acc_list_ce.append(acc_ce)
-        acc_list_mse.append(acc_mse)
+        acc_list_small.append(acc_small)
+        acc_list_full.append(acc_full)
 
     plt.figure(figsize=(10, 6))
-    plt.plot(range(1, EPOCH + 1), acc_list_ce, label="CrossEntropy", marker="o")
-    plt.plot(range(1, EPOCH + 1), acc_list_mse, label="MSE", marker="s")
+    plt.plot(
+        range(1, EPOCH + 1),
+        acc_list_small,
+        label=f"Batch Size={batch_size_small}",
+        marker="o",
+    )
+    plt.plot(range(1, EPOCH + 1), acc_list_full, label="Full Batch", marker="s")
     plt.xlabel("Epoch")
     plt.ylabel("Accuracy On TestSet (%)")
-    plt.title("Comparison of Loss Functions: CrossEntropy vs MSE")
+    plt.title("Comparison of Batch Sizes")
     plt.legend()
     plt.grid(True)
     plt.show()
